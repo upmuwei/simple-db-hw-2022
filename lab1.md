@@ -736,13 +736,13 @@ Suppose you have a data file, "some_data_file.txt", with the following contents:
 You can convert this into a binary file that SimpleDB can query as follows:
 
 ```bash
-java -jar dist/simpledb.jar convert some_data_file.txt 3
+java -jar dist/simpledb.jar convert test_data_file.txt 3
 ```
 
 Here, the argument "3" tells conver that the input has 3 columns.
 
 The following code implements a simple selection query over this file. This code
-is equivalent to the SQL statement `SELECT * FROM some_data_file`.
+is equivalent to the SQL statement `SELECT * FROM test_data_file`.
 
 ```java
 package simpledb;
@@ -759,7 +759,7 @@ public class test {
 
         // create the table, associate it with some_data_file.dat
         // and tell the catalog about the schema of this table.
-        HeapFile table1 = new HeapFile(new File("some_data_file.dat"), descriptor);
+        HeapFile table1 = new HeapFile(new File("test_data_file.dat"), descriptor);
         Database.getCatalog().addTable(table1, "test");
 
         // construct the query: we use a simple SeqScan, which spoonfeeds
@@ -788,7 +788,7 @@ The table we create has three integer fields. To express this, we create a
 `TupleDesc` object and pass it an array of `Type` objects, and optionally an
 array of `String` field names. Once we have created this `TupleDesc`, we
 initialize a `HeapFile` object representing the table stored in
-`some_data_file.dat`. Once we have created the table, we add it to the catalog.
+`test_data_file.dat`. Once we have created the table, we add it to the catalog.
 If this were a database server that was already running, we would have this
 catalog information loaded. We need to load it explicitly to make this code
 self-contained.
@@ -805,7 +805,7 @@ We **strongly recommend** you try this out as a fun end-to-end test that will
 help you get experience writing your own test programs for simpledb. You should
 create the file "test.java" in the `src/java/simpledb` directory with the code
 above, and you should add some "import" statement above the code, and place the
-`some_data_file.dat` file in the top level directory. Then run:
+`test_data_file.dat` file in the top level directory. Then run:
 
 ```bash
 ant

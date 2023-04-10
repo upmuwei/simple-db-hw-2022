@@ -42,7 +42,6 @@ public class TupleDesc implements Serializable {
      *         that are included in this TupleDesc
      */
     public Iterator<TDItem> iterator() {
-        // TODO: some code goes here
         return tdItemList.iterator();
     }
 
@@ -160,6 +159,18 @@ public class TupleDesc implements Serializable {
         return t;
     }
 
+    /**
+     * 为每一个字段添加表的别名
+     * @param tableAlias 表的别名
+     * @return 一个每个Field添加的taleAlias的新TupleDesc
+     */
+    public TupleDesc newTupleDescByTableAlias(String tableAlias) {
+        TupleDesc desc = new TupleDesc(null);
+        for(TDItem tdItem : this.tdItemList) {
+            desc.tdItemList.add(new TDItem(tdItem.fieldType, tableAlias + '.' + tdItem.fieldName));
+        }
+        return desc;
+    }
     /**
      * Compares the specified object with this TupleDesc for equality. Two
      * TupleDescs are considered equal if they have the same number of items

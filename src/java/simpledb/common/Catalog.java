@@ -21,13 +21,27 @@ import java.util.concurrent.ConcurrentHashMap;
  * @Threadsafe
  */
 public class Catalog {
+    //tableId到数据库表映射Map
+    private final Map<Integer, DbFile> tableMap;
 
+    //表名称到表的映射
+    private final Map<String, DbFile> nameMap;
+
+    private final List<Integer> tableIds;
+    //从tableId到Primary Key映射Map
+    private final Map<Integer, String> pkeyFieldMap;
+
+    private final Map<Integer, String> tableNameMap;
     /**
      * Constructor.
      * Creates a new, empty catalog.
      */
     public Catalog() {
-        // TODO: some code goes here
+        tableMap = new HashMap<>(10);
+        nameMap = new HashMap<>(10);
+        tableIds = new ArrayList<>(10);
+        pkeyFieldMap = new HashMap<>(10);
+        tableNameMap = new HashMap<>(10);
     }
 
     /**
@@ -41,7 +55,11 @@ public class Catalog {
      * @param pkeyField the name of the primary key field
      */
     public void addTable(DbFile file, String name, String pkeyField) {
-        // TODO: some code goes here
+        tableMap.put(file.getId(), file);
+        tableIds.add(file.getId());
+        pkeyFieldMap.put(file.getId(), pkeyField);
+        nameMap.put(name, file);
+        tableNameMap.put(file.getId(), name);
     }
 
     public void addTable(DbFile file, String name) {
@@ -66,8 +84,11 @@ public class Catalog {
      * @throws NoSuchElementException if the table doesn't exist
      */
     public int getTableId(String name) throws NoSuchElementException {
-        // TODO: some code goes here
-        return 0;
+        DbFile file = nameMap.get(name);
+        if(file == null) {
+            throw new NoSuchElementException("不存在对应的表");
+        }
+        return file.getId();
     }
 
     /**
@@ -78,8 +99,11 @@ public class Catalog {
      * @throws NoSuchElementException if the table doesn't exist
      */
     public TupleDesc getTupleDesc(int tableid) throws NoSuchElementException {
-        // TODO: some code goes here
-        return null;
+        DbFile file = tableMap.get(tableid);
+        if(file == null) {
+            throw new NoSuchElementException("不存在对应的表");
+        }
+        return file.getTupleDesc();
     }
 
     /**
@@ -90,30 +114,31 @@ public class Catalog {
      *                function passed to addTable
      */
     public DbFile getDatabaseFile(int tableid) throws NoSuchElementException {
-        // TODO: some code goes here
-        return null;
+        return tableMap.get(tableid);
     }
 
     public String getPrimaryKey(int tableid) {
-        // TODO: some code goes here
-        return null;
+        return pkeyFieldMap.get(tableid);
     }
 
     public Iterator<Integer> tableIdIterator() {
-        // TODO: some code goes here
-        return null;
+        return tableIds.iterator();
     }
 
     public String getTableName(int id) {
         // TODO: some code goes here
-        return null;
+        return tableNameMap.get(id);
     }
 
     /**
      * Delete all tables from the catalog
      */
     public void clear() {
-        // TODO: some code goes here
+        tableMap.clear();
+        nameMap.clear();
+        tableIds.clear();
+        pkeyFieldMap.clear();
+        tableNameMap.clear();
     }
 
     /**

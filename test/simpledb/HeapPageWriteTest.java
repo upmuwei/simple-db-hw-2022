@@ -72,7 +72,8 @@ public class HeapPageWriteTest extends SimpleDbTestBase {
                 Tuple tup = it.next();
                 if (TestUtil.compareTuples(addition, tup)) {
                     found = true;
-
+//                    System.out.println(page.getId());
+//                    System.out.println(tup.getRecordId().getPageId());
                     // verify that the RecordId is sane
                     assertEquals(page.getId(), tup.getRecordId().getPageId());
                     break;

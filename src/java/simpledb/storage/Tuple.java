@@ -15,7 +15,7 @@ public class Tuple implements Serializable {
 
     private TupleDesc tupleDesc;
 
-    private Field[] fields;
+    private final Field[] fields;
 
     private RecordId recordId;
     /**

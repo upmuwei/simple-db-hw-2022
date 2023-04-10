@@ -1,5 +1,6 @@
 package simpledb.common;
 
+import simpledb.storage.DoubleField;
 import simpledb.storage.Field;
 import simpledb.storage.IntField;
 import simpledb.storage.StringField;
@@ -48,6 +49,21 @@ public enum Type implements Serializable {
                 throw new ParseException("couldn't parse", 0);
             }
         }
+    }, DOUBLE_TYPE() {
+        @Override
+        public int getLen() {
+            return 8;
+        }
+
+        @Override
+        public Field parse(DataInputStream dis) throws ParseException {
+            try {
+                return new DoubleField(dis.readDouble());
+            } catch (IOException e) {
+                throw new ParseException("couldn't parse", 0);
+            }
+        }
+
     };
 
     public static final int STRING_LEN = 128;

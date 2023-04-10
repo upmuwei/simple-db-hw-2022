@@ -7,6 +7,7 @@ import simpledb.common.Permissions;
 import simpledb.transaction.TransactionAbortedException;
 import simpledb.transaction.TransactionId;
 
+import javax.xml.crypto.Data;
 import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -38,13 +39,20 @@ public class BufferPool {
      */
     public static final int DEFAULT_PAGES = 50;
 
+    //最大page数目
+    private int maxPageNum;
+
+    private int currentPageNum;
+    private  List<Page> cachedPages;
     /**
      * Creates a BufferPool that caches up to numPages pages.
      *
      * @param numPages maximum number of pages in this buffer pool.
      */
     public BufferPool(int numPages) {
-        // TODO: some code goes here
+        this.maxPageNum = numPages;
+        cachedPages = new LinkedList<>();
+        currentPageNum = 0;
     }
 
     public static int getPageSize() {
@@ -78,8 +86,19 @@ public class BufferPool {
      */
     public Page getPage(TransactionId tid, PageId pid, Permissions perm)
             throws TransactionAbortedException, DbException {
-        // TODO: some code goes here
-        return null;
+        for(Page page : cachedPages) {
+            if(page.getId().equals(pid)) {
+                return page;
+            }
+        }
+        if(cachedPages.size() == maxPageNum) {
+            throw new DbException("缓存池已用完");
+        }
+        DbFile file = Database.getCatalog().getDatabaseFile(pid.getTableId());
+        Page page = file.readPage(pid);
+        page.markDirty(true, tid);
+        cachedPages.add(page);
+        return page;
     }
 
     /**
