@@ -15,7 +15,7 @@ public class Tuple implements Serializable {
 
     private TupleDesc tupleDesc;
 
-    private final Field[] fields;
+    private Field[] fields;
 
     private RecordId recordId;
     /**
@@ -61,7 +61,7 @@ public class Tuple implements Serializable {
      * @param f new value for the field.
      */
     public void setField(int i, Field f) {
-        if(fields.length >= i) {
+        if(fields.length > i) {
             fields[i] = f;
         }
     }

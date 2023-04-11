@@ -27,7 +27,7 @@ public interface Field extends Serializable {
      * @param value The value to compare this Field to
      * @return Whether or not the comparison yields true.
      */
-    boolean compare(Predicate.Op op, Field value);
+    boolean compare(Predicate.Op op, Field value) throws IllegalCastException;
 
     /**
      * Returns the type of this field (see {@link Type#INT_TYPE} or {@link Type#STRING_TYPE}

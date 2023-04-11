@@ -1,6 +1,7 @@
 package simpledb.execution;
 
 import simpledb.storage.Field;
+import simpledb.storage.IllegalCastException;
 import simpledb.storage.Tuple;
 
 import java.io.Serializable;
@@ -48,6 +49,11 @@ public class Predicate implements Serializable {
 
     }
 
+    private final int field;
+
+    private final Op op;
+
+    private final Field operand;
     /**
      * Constructor.
      *
@@ -56,31 +62,30 @@ public class Predicate implements Serializable {
      * @param operand field value to compare passed in tuples to
      */
     public Predicate(int field, Op op, Field operand) {
-        // TODO: some code goes here
+        this.field = field;
+        this.op = op;
+        this.operand = operand;
     }
 
     /**
      * @return the field number
      */
     public int getField() {
-        // TODO: some code goes here
-        return -1;
+        return field;
     }
 
     /**
      * @return the operator
      */
     public Op getOp() {
-        // TODO: some code goes here
-        return null;
+        return op;
     }
 
     /**
      * @return the operand
      */
     public Field getOperand() {
-        // TODO: some code goes here
-        return null;
+        return operand;
     }
 
     /**
@@ -92,9 +97,16 @@ public class Predicate implements Serializable {
      * @param t The tuple to compare against
      * @return true if the comparison is true, false otherwise.
      */
-    public boolean filter(Tuple t) {
-        // TODO: some code goes here
-        return false;
+    public boolean filter(Tuple t)  {
+        if(t == null) {
+            return false;
+        }
+        Field f =  t.getField(field);
+        try {
+            return f.compare(op, operand);
+        } catch (IllegalCastException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     /**
@@ -102,7 +114,6 @@ public class Predicate implements Serializable {
      * operand_string"
      */
     public String toString() {
-        // TODO: some code goes here
-        return "";
+        return field + " " +  op.toString() + " " + operand.toString();
     }
 }

@@ -52,10 +52,11 @@ public class IntField implements Field {
      * @throws IllegalCastException if val is not an IntField
      * @see Field#compare
      */
-    public boolean compare(Predicate.Op op, Field val) {
-
+    public boolean compare(Predicate.Op op, Field val)  {
+        if(!(val instanceof IntField)) {
+            throw new IllegalCastException("val is not an IntField");
+        }
         IntField iVal = (IntField) val;
-
         switch (op) {
             case EQUALS:
             case LIKE:

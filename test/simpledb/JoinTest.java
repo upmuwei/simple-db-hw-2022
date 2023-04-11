@@ -8,6 +8,7 @@ import junit.framework.JUnit4TestAdapter;
 import org.junit.Before;
 import org.junit.Test;
 
+import simpledb.common.DbException;
 import simpledb.common.Utility;
 import simpledb.execution.Join;
 import simpledb.execution.JoinPredicate;
@@ -16,6 +17,7 @@ import simpledb.execution.Predicate;
 import simpledb.storage.Tuple;
 import simpledb.storage.TupleDesc;
 import simpledb.systemtest.SimpleDbTestBase;
+import simpledb.transaction.TransactionAbortedException;
 
 public class JoinTest extends SimpleDbTestBase {
 
@@ -66,6 +68,7 @@ public class JoinTest extends SimpleDbTestBase {
   @Test public void getTupleDesc() {
     JoinPredicate pred = new JoinPredicate(0, Predicate.Op.EQUALS, 0);
     Join op = new Join(pred, scan1, scan2);
+
     TupleDesc expected = Utility.getTupleDesc(width1 + width2);
     TupleDesc actual = op.getTupleDesc();
     assertEquals(expected, actual);

@@ -45,6 +45,9 @@ public class DoubleField implements Field{
 
     @Override
     public boolean compare(Predicate.Op op, Field val) {
+        if(!(val instanceof DoubleField)) {
+            throw new IllegalCastException("val is not an DoubleField");
+        }
         DoubleField iVal = (DoubleField) val;
 
         switch (op) {
