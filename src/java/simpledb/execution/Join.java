@@ -1,6 +1,7 @@
 package simpledb.execution;
 
 import simpledb.common.DbException;
+import simpledb.storage.RecordId;
 import simpledb.storage.Tuple;
 import simpledb.storage.TupleDesc;
 import simpledb.transaction.TransactionAbortedException;
@@ -21,6 +22,8 @@ public class Join extends Operator {
     private OpIterator child2;
 
     private Tuple child1Next;
+
+    private int tupleNo;
     /**
      * Constructor. Accepts two children to join and the predicate to join them
      * on
@@ -68,6 +71,7 @@ public class Join extends Operator {
         child1.open();
         child2.open();
         super.open();
+        tupleNo = 0;
     }
 
     public void close() {
@@ -79,6 +83,7 @@ public class Join extends Operator {
     public void rewind() throws DbException, TransactionAbortedException {
         child1.rewind();
         child2.rewind();
+        tupleNo = 0;
     }
 
     /**
@@ -109,7 +114,7 @@ public class Join extends Operator {
                 Tuple t2 = child2.next();
                 if(p.filter(t1, t2)) {
                     Tuple t = new Tuple(getTupleDesc());
-                  //  t.setRecordId(t1.getRecordId());
+                    t.setRecordId(new RecordId(t1.getRecordId().getPageId(), tupleNo++));
                     for(int i = 0; i < child1.getTupleDesc().numFields(); i++) {
                         t.setField(i, t1.getField(i));
                     }
@@ -128,13 +133,16 @@ public class Join extends Operator {
 
     @Override
     public OpIterator[] getChildren() {
-        // TODO: some code goes here
-        return null;
+        OpIterator[] childs = new OpIterator[2];
+        childs[0] = child1;
+        childs[1] = child2;
+        return childs;
     }
 
     @Override
     public void setChildren(OpIterator[] children) {
-        // TODO: some code goes here
+        child1 = children[0];
+        child2 = children[1];
     }
 
 }

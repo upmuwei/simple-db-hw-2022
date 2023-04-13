@@ -76,13 +76,14 @@ public class Filter extends Operator {
 
     @Override
     public OpIterator[] getChildren() {
-        // TODO: some code goes here
-        return null;
+        OpIterator[] childern = new OpIterator[1];
+        childern[0] = child;
+        return childern;
     }
 
     @Override
     public void setChildren(OpIterator[] children) {
-        // TODO: some code goes here
+        child = children[0];
     }
 
 }
