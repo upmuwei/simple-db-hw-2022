@@ -38,7 +38,6 @@ public class HeapFileWriteTest extends TestUtil.CreateHeapFile {
             empty.insertTuple(tid, Utility.getHeapTuple(i, 2));
             assertEquals(1, empty.numPages());
         }
-
         // the next 512 additions should live on a new page
         for (int i = 0; i < 504; ++i) {
             empty.insertTuple(tid, Utility.getHeapTuple(i, 2));
@@ -77,6 +76,12 @@ public class HeapFileWriteTest extends TestUtil.CreateHeapFile {
         smallFile.writePage(new HeapPage(new HeapPageId(tableId, 2), full));
         smallFile.writePage(new HeapPage(new HeapPageId(tableId, 3), empty));
         smallFile.writePage(new HeapPage(new HeapPageId(tableId, 4), full));
+
+        for(int i = 0; i < smallFile.numPages(); i++) {
+            HeapPage page = (HeapPage) smallFile.readPage(new HeapPageId(tableId, i));
+            System.out.println(page.getNumUnusedSlots());
+        }
+
         DbFileIterator it = smallFile.iterator(tid);
         it.open();
         int count = 0;

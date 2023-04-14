@@ -18,11 +18,13 @@ import java.util.*;
  */
 public class HeapPage implements Page {
 
-    final HeapPageId pid;
-    final TupleDesc td;
-    final byte[] header;
-    final Tuple[] tuples;
-    final int numSlots;
+    private final HeapPageId pid;
+    private final TupleDesc td;
+    private final byte[] header;
+    private final Tuple[] tuples;
+    private final int numSlots;
+
+    private TransactionId transactionId;
 
     byte[] oldData;
     private final Byte oldDataLock = (byte) 0;
@@ -275,17 +277,15 @@ public class HeapPage implements Page {
         if(!t.getTupleDesc().equals(this.td) ) {
             throw new DbException("表结构不匹配");
         }
-        if(getNumUnusedSlots() == 0) {
-            throw new DbException("页已占满，无剩余空间");
-        }
         for(int i = 0; i < tuples.length; i++) {
             if(!isSlotUsed(i)) {
                 markSlotUsed(i, true);
                 tuples[i] = t;
                 t.setRecordId(new RecordId(pid, i));
-                break;
+                return;
             }
         }
+        throw new DbException("页已占满，无剩余空间");
     }
 
     /**
@@ -293,17 +293,19 @@ public class HeapPage implements Page {
      * that did the dirtying
      */
     public void markDirty(boolean dirty, TransactionId tid) {
-        // TODO: some code goes here
-        // not necessary for lab1
+        if(!dirty) {
+            this.transactionId = null;
+        } else {
+            this.transactionId = tid;
+        }
+
     }
 
     /**
      * Returns the tid of the transaction that last dirtied this page, or null if the page is not dirty
      */
     public TransactionId isDirty() {
-        // TODO: some code goes here
-        // Not necessary for lab1
-        return null;      
+        return transactionId;
     }
 
     /**

@@ -9,10 +9,7 @@ import simpledb.transaction.TransactionId;
 
 import javax.xml.crypto.Data;
 import java.io.*;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.NoSuchElementException;
+import java.util.*;
 
 /**
  * HeapFile is an implementation of a DbFile that stores a collection of tuples
@@ -62,7 +59,6 @@ public class HeapFile implements DbFile {
      */
     public int getId() {
         return f.getAbsoluteFile().hashCode();
-//        throw new UnsupportedOperationException("implement this");
     }
 
     /**
@@ -72,7 +68,6 @@ public class HeapFile implements DbFile {
      */
     public TupleDesc getTupleDesc() {
         return td;
-       // throw new UnsupportedOperationException("implement this");
     }
 
     // see DbFile.java for javadocs
@@ -89,15 +84,31 @@ public class HeapFile implements DbFile {
             stream.close();
             return new HeapPage(new HeapPageId(pid.getTableId(), pid.getPageNumber()), data);
         } catch (IOException e) {
-            System.err.println(e.toString());
+            e.printStackTrace();
         }
         return null;
     }
 
     // see DbFile.java for javadocs
     public void writePage(Page page) throws IOException {
-        // TODO: some code goes here
-        // not necessary for lab1
+        int pageNo = page.getId().getPageNumber();
+        DataOutputStream stream;
+        if(pageNo == numPages()) {
+            stream = new DataOutputStream(new FileOutputStream(f, true));
+            stream.write(page.getPageData(), 0, BufferPool.getPageSize());
+            stream.close();
+        } else {
+            byte[] data = new byte[(int) f.length()];
+            DataInputStream in = new DataInputStream(new FileInputStream(f));
+            int len = in.read(data);
+            in.close();
+            stream = new DataOutputStream(new FileOutputStream(f, false));
+            stream.write(data, 0, BufferPool.getPageSize() * pageNo);
+            stream.write(page.getPageData());
+            int index = BufferPool.getPageSize() * (pageNo + 1);
+            stream.write(data, index, data.length - index);
+        }
+
     }
 
     /**
@@ -110,17 +121,28 @@ public class HeapFile implements DbFile {
     // see DbFile.java for javadocs
     public List<Page> insertTuple(TransactionId tid, Tuple t)
             throws DbException, IOException, TransactionAbortedException {
-        // TODO: some code goes here
-        return null;
-        // not necessary for lab1
+        HeapPage page;
+        int pageNum = numPages();
+        for(int i = 0; i < pageNum; i++) {
+            page = (HeapPage)Database.getBufferPool().getPage(tid, new HeapPageId(getId(), i), Permissions.READ_WRITE);
+            if(page.getNumUnusedSlots() > 0) {
+                page.insertTuple(t);
+                return Collections.singletonList(page);
+            }
+        }
+        byte[] data = HeapPage.createEmptyPageData();
+        page = new HeapPage(new HeapPageId(getId(), numPages()), data);
+        page.insertTuple(t);
+        writePage(page);
+        return Collections.singletonList(page);
     }
 
     // see DbFile.java for javadocs
     public List<Page> deleteTuple(TransactionId tid, Tuple t) throws DbException,
             TransactionAbortedException {
-        // TODO: some code goes here
-        return null;
-        // not necessary for lab1
+        HeapPage page = (HeapPage)Database.getBufferPool().getPage(tid, t.getRecordId().getPageId(), Permissions.READ_WRITE);
+        page.deleteTuple(t);
+        return Collections.singletonList(page);
     }
 
     // see DbFile.java for javadocs
@@ -162,7 +184,10 @@ public class HeapFile implements DbFile {
             } else if(++pageNo < pageNum){
                 HeapPage page = (HeapPage) Database.getBufferPool().getPage(tId, new HeapPageId(tableId, pageNo), Permissions.READ_ONLY);
                 tupleIterator = page.iterator();
-                return tupleIterator.hasNext();
+                if(!tupleIterator.hasNext()) {
+                    return hasNext();
+                }
+                return true;
             }
             return false;
         }
