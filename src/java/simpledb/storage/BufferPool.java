@@ -9,6 +9,7 @@ import simpledb.transaction.TransactionId;
 
 import javax.xml.crypto.Data;
 import java.io.IOException;
+import java.nio.BufferOverflowException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -41,9 +42,10 @@ public class BufferPool {
 
     //最大page数目
     private int maxPageNum;
-
-    private int currentPageNum;
+    //准备置换出缓存的页
+    private int evictPageNum;
     private  List<Page> cachedPages;
+    private Map<PageId, Page> idPageMap;
     /**
      * Creates a BufferPool that caches up to numPages pages.
      *
@@ -51,8 +53,9 @@ public class BufferPool {
      */
     public BufferPool(int numPages) {
         this.maxPageNum = numPages;
-        cachedPages = new LinkedList<>();
-        currentPageNum = 0;
+        cachedPages = new ArrayList<>(numPages);
+        idPageMap = new HashMap<>();
+        evictPageNum = 0;
     }
 
     public static int getPageSize() {
@@ -86,18 +89,18 @@ public class BufferPool {
      */
     public Page getPage(TransactionId tid, PageId pid, Permissions perm)
             throws TransactionAbortedException, DbException {
-        for(Page page : cachedPages) {
-            if(page.getId().equals(pid)) {
-                return page;
-            }
+        Page page = idPageMap.get(pid);
+        if(page != null) {
+            return page;
         }
         if(cachedPages.size() == maxPageNum) {
-            throw new DbException("缓存池已用完");
+            evictPage();
         }
         DbFile file = Database.getCatalog().getDatabaseFile(pid.getTableId());
-        Page page = file.readPage(pid);
+        page = file.readPage(pid);
         page.markDirty(true, tid);
         cachedPages.add(page);
+        idPageMap.put(pid, page);
         return page;
     }
 
@@ -165,20 +168,12 @@ public class BufferPool {
             throws DbException, IOException, TransactionAbortedException {
         DbFile file = Database.getCatalog().getDatabaseFile(tableId);
         List<Page> rPages = file.insertTuple(tid, t);
-        boolean exist = false;
         for(Page rPage : rPages) {
-            for(Page page : cachedPages) {
-                if(page.getId().equals(rPage.getId())) {
-                    exist = true;
-                    break;
-                }
-
-            }
-            if(!exist) {
+            if(idPageMap.get(rPage.getId()) == null) {
                 cachedPages.add(rPage);
+                idPageMap.put(rPage.getId(), rPage);
             }
         }
-
     }
 
     /**
@@ -206,9 +201,9 @@ public class BufferPool {
      * break simpledb if running in NO STEAL mode.
      */
     public synchronized void flushAllPages() throws IOException {
-        // TODO: some code goes here
-        // not necessary for lab1
-
+        for(PageId pageId : idPageMap.keySet()) {
+            flushPage(pageId);
+        }
     }
 
     /**
@@ -221,8 +216,13 @@ public class BufferPool {
      * are removed from the cache so they can be reused safely
      */
     public synchronized void removePage(PageId pid) {
-        // TODO: some code goes here
-        // not necessary for lab1
+        idPageMap.remove(pid);
+        for(int i = 0; i < cachedPages.size(); i++) {
+            if(cachedPages.get(i).getId().equals(pid)) {
+                cachedPages.remove(i);
+                break;
+            }
+        }
     }
 
     /**
@@ -231,8 +231,10 @@ public class BufferPool {
      * @param pid an ID indicating the page to flush
      */
     private synchronized void flushPage(PageId pid) throws IOException {
-        // TODO: some code goes here
-        // not necessary for lab1
+        Page page = idPageMap.get(pid);
+        if(page != null) {
+            Database.getCatalog().getDatabaseFile(pid.getTableId()).writePage(page);
+        }
     }
 
     /**
@@ -248,8 +250,15 @@ public class BufferPool {
      * Flushes the page to disk to ensure dirty pages are updated on disk.
      */
     private synchronized void evictPage() throws DbException {
-        // TODO: some code goes here
-        // not necessary for lab1
+        try {
+            PageId pageId = cachedPages.get(evictPageNum).getId();
+            flushPage(pageId);
+            idPageMap.remove(pageId);
+            cachedPages.remove(evictPageNum);
+            evictPageNum = (evictPageNum + 1) % maxPageNum;
+        } catch (IOException e) {
+            throw new DbException("置换页错误，缓存写入失败");
+        }
     }
 
 }

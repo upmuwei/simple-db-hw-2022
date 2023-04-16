@@ -114,7 +114,7 @@ public class Join extends Operator {
                 Tuple t2 = child2.next();
                 if(p.filter(t1, t2)) {
                     Tuple t = new Tuple(getTupleDesc());
-                    t.setRecordId(new RecordId(t1.getRecordId().getPageId(), tupleNo++));
+                  //  t.setRecordId(new RecordId(t1.getRecordId().getPageId(), tupleNo++));
                     for(int i = 0; i < child1.getTupleDesc().numFields(); i++) {
                         t.setField(i, t1.getField(i));
                     }
