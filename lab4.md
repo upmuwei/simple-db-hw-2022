@@ -319,7 +319,7 @@ Implement deadlock detection or prevention in `src/simpledb/BufferPool.java`.
 You have many design decisions for your deadlock handling system, but it is not
 necessary to do something highly sophisticated. We expect you to do better than
 a simple timeout on each transaction. A good starting point will be to implement
-cycle-detection in a wait-for graph before every lock request, and you will
+f in a wait-for graph before every lock request, and you will
 receive full credit for such an implementation.  Please describe your choices in
 the lab writeup and list the pros and cons of your choice compared to the
 alternatives.

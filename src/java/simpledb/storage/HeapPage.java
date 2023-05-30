@@ -293,10 +293,10 @@ public class HeapPage implements Page {
      * that did the dirtying
      */
     public void markDirty(boolean dirty, TransactionId tid) {
-        if(!dirty) {
-            this.transactionId = null;
-        } else {
+        if(dirty) {
             this.transactionId = tid;
+        } else {
+            this.transactionId = null;
         }
 
     }
@@ -305,7 +305,7 @@ public class HeapPage implements Page {
      * Returns the tid of the transaction that last dirtied this page, or null if the page is not dirty
      */
     public TransactionId isDirty() {
-        return transactionId;
+        return this.transactionId;
     }
 
     /**

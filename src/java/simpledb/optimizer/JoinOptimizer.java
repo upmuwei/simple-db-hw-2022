@@ -101,11 +101,7 @@ public class JoinOptimizer {
             // You do not need to implement proper support for these for Lab 3.
             return card1 + cost1 + cost2;
         } else {
-            // Insert your code here.
-            // HINT: You may need to use the variable "j" if you implemented
-            // a join algorithm that's more complicated than a basic
-            // nested-loops join.
-            return -1.0;
+            return cost1 + card2 * cost2;
         }
     }
 

@@ -1,15 +1,10 @@
 package simpledb.storage;
 
-import simpledb.common.Database;
-import simpledb.common.DbException;
-import simpledb.common.DeadlockException;
-import simpledb.common.Permissions;
+import simpledb.common.*;
 import simpledb.transaction.TransactionAbortedException;
 import simpledb.transaction.TransactionId;
 
-import javax.xml.crypto.Data;
 import java.io.IOException;
-import java.nio.BufferOverflowException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -46,6 +41,14 @@ public class BufferPool {
     private int evictPageNum;
     private  List<Page> cachedPages;
     private Map<PageId, Page> idPageMap;
+
+    //事务加锁页对应关系
+   // private ConcurrentMap<TransactionId, List<PageId>> transactionIdConcurrentMap;
+    //false为共享锁，true为排它锁
+ //   private ConcurrentMap<PageId, Boolean> lockConcurrentMap;
+    //在页上锁的数目
+ //   private ConcurrentMap<PageId, Integer> lockNumConcurrentMap;
+    private final LockManager lockManager = new LockManager();
     /**
      * Creates a BufferPool that caches up to numPages pages.
      *
@@ -89,6 +92,12 @@ public class BufferPool {
      */
     public Page getPage(TransactionId tid, PageId pid, Permissions perm)
             throws TransactionAbortedException, DbException {
+
+        if(perm == Permissions.READ_WRITE) {
+            lockManager.getWriteLock(tid, pid);
+        } else if(perm == Permissions.READ_ONLY){
+            lockManager.getReadLock(tid, pid);
+        }
         Page page = idPageMap.get(pid);
         if(page != null) {
             return page;
@@ -98,7 +107,6 @@ public class BufferPool {
         }
         DbFile file = Database.getCatalog().getDatabaseFile(pid.getTableId());
         page = file.readPage(pid);
-        page.markDirty(true, tid);
         cachedPages.add(page);
         idPageMap.put(pid, page);
         return page;
@@ -114,8 +122,7 @@ public class BufferPool {
      * @param pid the ID of the page to unlock
      */
     public void unsafeReleasePage(TransactionId tid, PageId pid) {
-        // TODO: some code goes here
-        // not necessary for lab1|lab2
+        lockManager.releaseLock(tid, pid);
     }
 
     /**
@@ -124,17 +131,14 @@ public class BufferPool {
      * @param tid the ID of the transaction requesting the unlock
      */
     public void transactionComplete(TransactionId tid) {
-        // TODO: some code goes here
-        // not necessary for lab1|lab2
+        lockManager.releaseAllLock(tid);
     }
 
     /**
      * Return true if the specified transaction has a lock on the specified page
      */
     public boolean holdsLock(TransactionId tid, PageId p) {
-        // TODO: some code goes here
-        // not necessary for lab1|lab2
-        return false;
+        return lockManager.holdsLock(tid, p);
     }
 
     /**
@@ -145,10 +149,23 @@ public class BufferPool {
      * @param commit a flag indicating whether we should commit or abort
      */
     public void transactionComplete(TransactionId tid, boolean commit) {
-        // TODO: some code goes here
-        // not necessary for lab1|lab2
+        if(commit) {
+            try {
+                flushPages(tid);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        } else {
+            for(PageId pageId : lockManager.getLockPageId(tid)) {
+                if(idPageMap.get(pageId) != null && tid.equals(idPageMap.get(pageId).isDirty())) {
+                    removePage(pageId);
+                }
+            }
+        }
+        transactionComplete(tid);
     }
 
+    
     /**
      * Add a tuple to the specified table on behalf of transaction tid.  Will
      * acquire a write lock on the page the tuple is added to and any other
@@ -201,8 +218,10 @@ public class BufferPool {
      * break simpledb if running in NO STEAL mode.
      */
     public synchronized void flushAllPages() throws IOException {
-        for(PageId pageId : idPageMap.keySet()) {
-            flushPage(pageId);
+        for(Page page : cachedPages) {
+            if(page.isDirty() != null) {
+                flushPage(page.getId());
+            }
         }
     }
 
@@ -241,8 +260,12 @@ public class BufferPool {
      * Write all pages of the specified transaction to disk.
      */
     public synchronized void flushPages(TransactionId tid) throws IOException {
-        // TODO: some code goes here
-        // not necessary for lab1|lab2
+        for (Page cachedPage : cachedPages) {
+            if (tid.equals(cachedPage.isDirty())) {
+                flushPage(cachedPage.getId());
+                cachedPage.markDirty(false, tid);
+            }
+        }
     }
 
     /**
@@ -250,15 +273,24 @@ public class BufferPool {
      * Flushes the page to disk to ensure dirty pages are updated on disk.
      */
     private synchronized void evictPage() throws DbException {
-        try {
-            PageId pageId = cachedPages.get(evictPageNum).getId();
-            flushPage(pageId);
-            idPageMap.remove(pageId);
-            cachedPages.remove(evictPageNum);
-            evictPageNum = (evictPageNum + 1) % maxPageNum;
-        } catch (IOException e) {
-            throw new DbException("置换页错误，缓存写入失败");
-        }
+        evictPageFIFO();
     }
 
+    private void evictPageFIFO() throws DbException {
+        Page page = null;// = cachedPages.get(0).getId();
+        int signPageNum = 0;
+        while(signPageNum != maxPageNum) {
+            page = cachedPages.get(signPageNum);
+            if(page.isDirty() == null) {
+                break;
+            }
+            signPageNum++;
+        }
+        if(signPageNum == maxPageNum) {
+            throw new DbException("没有页可以被置换");
+        } else {
+            idPageMap.remove(page.getId());
+            cachedPages.remove(evictPageNum);
+        }
+    }
 }

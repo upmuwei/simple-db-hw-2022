@@ -26,8 +26,8 @@ public class HeapFile implements DbFile {
     private final File f;
     //文件结构
     private final TupleDesc td;
-
-
+    //页总数
+    private int pageNum;
     /**
      * Constructs a heap file backed by the specified file.
      *
@@ -37,6 +37,7 @@ public class HeapFile implements DbFile {
     public HeapFile(File f, TupleDesc td) {
         this.f = f;
         this.td = td;
+        this.pageNum = numPages();
     }
 
     /**
@@ -72,13 +73,13 @@ public class HeapFile implements DbFile {
 
     // see DbFile.java for javadocs
     public Page readPage(PageId pid) throws IllegalArgumentException{
-        int pageNum = pid.getPageNumber();
-        if(pageNum >= numPages()) {
+        int pageNo = pid.getPageNumber();
+        if(pageNo >= pageNum) {
             throw new IllegalArgumentException("the page does not exist in this page");
         }
         try {
             DataInputStream stream = new DataInputStream(new FileInputStream(f));
-            stream.skipBytes(pageNum * BufferPool.getPageSize());
+            stream.skipBytes(pageNo * BufferPool.getPageSize());
             byte[] data = new byte[BufferPool.getPageSize()];
             int len = stream.read(data ,0, BufferPool.getPageSize());
             stream.close();
@@ -93,10 +94,11 @@ public class HeapFile implements DbFile {
     public void writePage(Page page) throws IOException {
         int pageNo = page.getId().getPageNumber();
         DataOutputStream stream;
-        if(pageNo == numPages()) {
+        if(pageNo == pageNum) {
             stream = new DataOutputStream(new FileOutputStream(f, true));
             stream.write(page.getPageData(), 0, BufferPool.getPageSize());
             stream.close();
+            pageNum++;
         } else {
             byte[] data = new byte[(int) f.length()];
             DataInputStream in = new DataInputStream(new FileInputStream(f));
@@ -122,11 +124,11 @@ public class HeapFile implements DbFile {
     public List<Page> insertTuple(TransactionId tid, Tuple t)
             throws DbException, IOException, TransactionAbortedException {
         HeapPage page;
-        int pageNum = numPages();
-        for(int i = 0; i < pageNum; i++) {
+        for(int i = pageNum - 1; i >= 0; i--) {
             page = (HeapPage)Database.getBufferPool().getPage(tid, new HeapPageId(getId(), i), Permissions.READ_WRITE);
             if(page.getNumUnusedSlots() > 0) {
                 page.insertTuple(t);
+                page.markDirty(true, tid);
                 return Collections.singletonList(page);
             }
         }
@@ -134,14 +136,22 @@ public class HeapFile implements DbFile {
         page = new HeapPage(new HeapPageId(getId(), numPages()), data);
         page.insertTuple(t);
         writePage(page);
+        page.markDirty(true, tid);
         return Collections.singletonList(page);
     }
 
     // see DbFile.java for javadocs
     public List<Page> deleteTuple(TransactionId tid, Tuple t) throws DbException,
             TransactionAbortedException {
+        if(t.getRecordId().getPageId().getPageNumber() >= pageNum) {
+            throw new DbException("不存在该页");
+        }
         HeapPage page = (HeapPage)Database.getBufferPool().getPage(tid, t.getRecordId().getPageId(), Permissions.READ_WRITE);
+//        if(!tid.equals(page.isDirty())) {
+//            throw new TransactionAbortedException();
+//        }
         page.deleteTuple(t);
+        page.markDirty(true, tid);
         return Collections.singletonList(page);
     }
 
