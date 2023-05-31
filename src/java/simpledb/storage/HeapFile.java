@@ -125,17 +125,24 @@ public class HeapFile implements DbFile {
             throws DbException, IOException, TransactionAbortedException {
         HeapPage page;
         for(int i = pageNum - 1; i >= 0; i--) {
-            page = (HeapPage)Database.getBufferPool().getPage(tid, new HeapPageId(getId(), i), Permissions.READ_WRITE);
+            PageId pid = new HeapPageId(getId(), i);
+            boolean holdsLock = Database.getBufferPool().holdsLock(tid, pid);
+            page = (HeapPage)Database.getBufferPool().getPage(tid, pid, Permissions.READ_ONLY);
             if(page.getNumUnusedSlots() > 0) {
+                page = (HeapPage)Database.getBufferPool().getPage(tid, pid, Permissions.READ_WRITE);
                 page.insertTuple(t);
                 page.markDirty(true, tid);
                 return Collections.singletonList(page);
+            }
+            if(!holdsLock) {
+                Database.getBufferPool().unsafeReleasePage(tid, pid);
             }
         }
         byte[] data = HeapPage.createEmptyPageData();
         page = new HeapPage(new HeapPageId(getId(), numPages()), data);
         page.insertTuple(t);
-        writePage(page);
+      //  writePage(page);
+
         page.markDirty(true, tid);
         return Collections.singletonList(page);
     }

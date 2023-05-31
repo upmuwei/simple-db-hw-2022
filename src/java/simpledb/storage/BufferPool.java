@@ -189,6 +189,7 @@ public class BufferPool {
             if(idPageMap.get(rPage.getId()) == null) {
                 cachedPages.add(rPage);
                 idPageMap.put(rPage.getId(), rPage);
+                lockManager.getWriteLock(tid, rPage.getId());
             }
         }
     }
