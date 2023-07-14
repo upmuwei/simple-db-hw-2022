@@ -15,6 +15,8 @@ import simpledb.storage.*;
 import simpledb.transaction.Transaction;
 import simpledb.transaction.TransactionAbortedException;
 
+import javax.xml.crypto.Data;
+
 import static org.junit.Assert.*;
 
 /**
@@ -265,12 +267,9 @@ public class LogTest extends SimpleDbTestBase {
         look(hf1, t, 3, false);
         look(hf1, t, 4, false);
         t.commit();
-
         // *** Test:
         // crash and recover: data should still not be there
-
         crash();
-
         t = new Transaction();
         t.start();
         look(hf1, t, 1, true);

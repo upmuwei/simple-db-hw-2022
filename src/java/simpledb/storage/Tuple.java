@@ -9,7 +9,7 @@ import java.util.Iterator;
  * specified schema specified by a TupleDesc object and contain Field objects
  * with the data for each field.
  */
-public class Tuple implements Serializable {
+public class Tuple implements Serializable, Cloneable {
 
     private static final long serialVersionUID = 1L;
 
@@ -107,5 +107,10 @@ public class Tuple implements Serializable {
      */
     public void resetTupleDesc(TupleDesc td) {
         this.tupleDesc = td;
+    }
+
+    public Object clone() throws CloneNotSupportedException{
+        Tuple tuple = (Tuple) super.clone();
+        return tuple;
     }
 }

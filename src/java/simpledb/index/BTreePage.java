@@ -144,5 +144,8 @@ public abstract class BTreePage implements Page {
      */
     public abstract boolean isSlotUsed(int i);
 
+    public int getKeyField() {
+        return keyField;
+    }
 }
 

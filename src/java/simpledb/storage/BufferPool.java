@@ -151,14 +151,24 @@ public class BufferPool {
     public void transactionComplete(TransactionId tid, boolean commit) {
         if(commit) {
             try {
-                flushPages(tid);
+                for (Page cachedPage : cachedPages) {
+                    if (tid.equals(cachedPage.isDirty())) {
+                        flushPage(cachedPage.getId());
+                        cachedPage.markDirty(false, tid);
+                        cachedPage.setBeforeImage();
+                    }
+                }
             } catch (IOException e) {
                 e.printStackTrace();
             }
-        } else {
+        }
+        else {
+            List<Page> oldPages = new ArrayList<>();
             for(PageId pageId : lockManager.getLockPageId(tid)) {
                 if(idPageMap.get(pageId) != null && tid.equals(idPageMap.get(pageId).isDirty())) {
-                    removePage(pageId);
+                    Page page = idPageMap.get(pageId);
+                    oldPages.add(page.getBeforeImage());
+                    replaceCachedPages(oldPages);
                 }
             }
         }
@@ -222,6 +232,7 @@ public class BufferPool {
         for(Page page : cachedPages) {
             if(page.isDirty() != null) {
                 flushPage(page.getId());
+                page.setBeforeImage();
             }
         }
     }
@@ -245,14 +256,34 @@ public class BufferPool {
         }
     }
 
+    public synchronized void replaceCachedPages(List<Page> newPages) {
+        for(Page page : newPages) {
+            if (idPageMap.containsKey(page.getId()))  {
+                for(int i = 0; i < cachedPages.size(); i++) {
+                    if(cachedPages.get(i).getId().equals(page.getId())) {
+                        cachedPages.set(i, page);
+                        idPageMap.replace(page.getId(), page);
+                    }
+                }
+            } else {
+                idPageMap.put(page.getId(), page);
+                cachedPages.add(page);
+            }
+        }
+    }
     /**
      * Flushes a certain page to disk
      *
      * @param pid an ID indicating the page to flush
      */
     private synchronized void flushPage(PageId pid) throws IOException {
-        Page page = idPageMap.get(pid);
-        if(page != null) {
+        if(idPageMap.containsKey(pid)) {
+            Page page = idPageMap.get(pid);
+            TransactionId dirtier = page.isDirty();
+            if(dirtier != null) {
+                Database.getLogFile().logWrite(dirtier, page.getBeforeImage(), page);
+                Database.getLogFile().force();
+            }
             Database.getCatalog().getDatabaseFile(pid.getTableId()).writePage(page);
         }
     }

@@ -93,22 +93,27 @@ public class HeapFile implements DbFile {
     // see DbFile.java for javadocs
     public void writePage(Page page) throws IOException {
         int pageNo = page.getId().getPageNumber();
-        DataOutputStream stream;
+
         if(pageNo == pageNum) {
-            stream = new DataOutputStream(new FileOutputStream(f, true));
+            DataOutputStream stream = new DataOutputStream(new FileOutputStream(f, true));
             stream.write(page.getPageData(), 0, BufferPool.getPageSize());
             stream.close();
             pageNum++;
         } else {
-            byte[] data = new byte[(int) f.length()];
-            DataInputStream in = new DataInputStream(new FileInputStream(f));
-            int len = in.read(data);
-            in.close();
-            stream = new DataOutputStream(new FileOutputStream(f, false));
-            stream.write(data, 0, BufferPool.getPageSize() * pageNo);
-            stream.write(page.getPageData());
-            int index = BufferPool.getPageSize() * (pageNo + 1);
-            stream.write(data, index, data.length - index);
+//            byte[] data = new byte[(int) f.length()];
+//            DataInputStream in = new DataInputStream(new FileInputStream(f));
+//            int len = in.read(data);
+//            in.close();
+//            stream = new DataOutputStream(new FileOutputStream(f, false));
+//            stream.write(data, 0, BufferPool.getPageSize() * pageNo);
+//            stream.write(page.getPageData());
+//            int index = BufferPool.getPageSize() * (pageNo + 1);
+//            stream.write(data, index, data.length - index);
+            RandomAccessFile rFile = new RandomAccessFile(f, "rw");
+            rFile.seek((long) BufferPool.getPageSize() * pageNo);
+            rFile.write(page.getPageData());
+            rFile.getChannel().force(true);
+            rFile.close();
         }
 
     }
@@ -140,9 +145,8 @@ public class HeapFile implements DbFile {
         }
         byte[] data = HeapPage.createEmptyPageData();
         page = new HeapPage(new HeapPageId(getId(), numPages()), data);
+        writePage(page);
         page.insertTuple(t);
-      //  writePage(page);
-
         page.markDirty(true, tid);
         return Collections.singletonList(page);
     }
@@ -154,9 +158,6 @@ public class HeapFile implements DbFile {
             throw new DbException("不存在该页");
         }
         HeapPage page = (HeapPage)Database.getBufferPool().getPage(tid, t.getRecordId().getPageId(), Permissions.READ_WRITE);
-//        if(!tid.equals(page.isDirty())) {
-//            throw new TransactionAbortedException();
-//        }
         page.deleteTuple(t);
         page.markDirty(true, tid);
         return Collections.singletonList(page);
